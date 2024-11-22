@@ -1,138 +1,92 @@
 import React, { useState } from 'react';
 
-function Card({ carro, buscarCarros }) {
+function Card({ tarefa, buscarTarefas }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedCar, setEditedCar] = useState({ ...carro });
-  const [isAluguelModalOpen, setIsAluguelModalOpen] = useState(false);
-  const [aluguelData, setAluguelData] = useState({
-    cpf_cliente: '',
-    data_retirada: '',
-    data_prevista_entrega: ''
-  });
-
-  const alterarSituacao = async (novaSituacao) => {
-    if (novaSituacao === 'alugado') {
-      setIsAluguelModalOpen(true);
-    } else {
-      await atualizarCarro(novaSituacao);
-    }
+  const [editedTarefa, setEditedTarefa] = useState({ ...tarefa });
+  
+  // Função para alterar o status da tarefa
+  const alterarStatus = async (novoStatus) => {
+    await atualizarTarefa(novoStatus);
   };
 
-  const atualizarCarro = async (novaSituacao, dadosAluguel = null) => {
-    const body = { ...carro, situacao: novaSituacao };
-    if (dadosAluguel) {
-      body.cpf_cliente = dadosAluguel.cpf_cliente;
-      body.data_retirada = dadosAluguel.data_retirada;
-      body.data_prevista_entrega = dadosAluguel.data_prevista_entrega;
-    }
-    await fetch(`http://localhost:3000/carros/${carro.id}`, {
+  // Função para atualizar a tarefa no backend
+  const atualizarTarefa = async (novoStatus) => {
+    const body = { ...tarefa, status: novoStatus };
+    await fetch(`http://localhost:3131/tarefas/${tarefa.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    buscarCarros();
+    buscarTarefas(); // Atualiza a lista de tarefas
   };
 
-  const salvarAluguel = async () => {
-    await atualizarCarro('alugado', aluguelData);
-    setIsAluguelModalOpen(false);
-    setAluguelData({ cpf_cliente: '', data_retirada: '', data_prevista_entrega: '' });
-  };
-
-  const editarCarro = async () => {
-    await fetch(`http://localhost:3000/carros/${carro.id}`, {
+  // Função para editar os dados da tarefa
+  const editarTarefa = async () => {
+    await fetch(`http://localhost:3131/tarefas/${tarefa.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editedCar)
+      body: JSON.stringify(editedTarefa)
     });
-    buscarCarros();
+    buscarTarefas();
     setIsEditing(false);
   };
 
-  const deletarCarro = async () => {
-    const confirmed = window.confirm("Tem certeza de que deseja deletar este carro?");
+  // Função para deletar a tarefa
+  const deletarTarefa = async () => {
+    const confirmed = window.confirm("Tem certeza de que deseja deletar esta tarefa?");
     if (confirmed) {
-      await fetch(`http://localhost:3000/carros/${carro.id}`, { method: 'DELETE' });
-      buscarCarros();
+      await fetch(`http://localhost:3131/tarefas/${tarefa.id}`, { method: 'DELETE' });
+      buscarTarefas();
     }
   };
 
   return (
     <div className="card">
-      <h3>{carro.modelo}</h3>
-      <p>Cor: {carro.cor}</p>
-      <p>KM: {carro.km}</p>
-      <p>Placa: {carro.placa}</p>
-      <p>Situação: {carro.situacao}</p>
-      {carro.situacao === 'uso' && (
+      <h3>{tarefa.titulo}</h3>
+      <p>Descrição: {tarefa.descricao}</p>
+      <p>Status: {tarefa.status}</p>
+      
+      {/* Botões para alterar o status */}
+      {tarefa.status === 'A Fazer' && (
         <>
-          <button onClick={() => alterarSituacao('alugado')}>Alugar</button>
-          <button onClick={() => alterarSituacao('manutencao')}>Manutenção</button>
+          <button onClick={() => alterarStatus('Em Progresso')}>Iniciar</button>
+          <button onClick={() => alterarStatus('Concluído')}>Concluir</button>
         </>
       )}
-      {carro.situacao === 'alugado' && (
-        <button onClick={() => alterarSituacao('uso')}>Devolver</button>
+      
+      {tarefa.status === 'Em Progresso' && (
+        <button onClick={() => alterarStatus('Concluído')}>Concluir</button>
       )}
-      {carro.situacao === 'manutencao' && (
-        <button onClick={() => alterarSituacao('uso')}>Finalizar Manutenção</button>
+      
+      {tarefa.status === 'Concluído' && (
+        <button onClick={() => alterarStatus('A Fazer')}>Reverter</button>
       )}
+
+      {/* Editar tarefa */}
       {isEditing && (
         <div>
           <input
-            value={editedCar.modelo}
-            onChange={(e) => setEditedCar({ ...editedCar, modelo: e.target.value })}
+            value={editedTarefa.titulo}
+            onChange={(e) => setEditedTarefa({ ...editedTarefa, titulo: e.target.value })}
           />
-          <input
-            value={editedCar.cor}
-            onChange={(e) => setEditedCar({ ...editedCar, cor: e.target.value })}
+          <textarea
+            value={editedTarefa.descricao}
+            onChange={(e) => setEditedTarefa({ ...editedTarefa, descricao: e.target.value })}
           />
-          <input
-            type="number"
-            value={editedCar.km}
-            onChange={(e) => setEditedCar({ ...editedCar, km: parseInt(e.target.value) })}
-          />
-          <input
-            value={editedCar.placa}
-            onChange={(e) => setEditedCar({ ...editedCar, placa: e.target.value })}
-          />
-          <button onClick={editarCarro}>Salvar</button>
+          <button onClick={editarTarefa}>Salvar</button>
           <button onClick={() => setIsEditing(false)}>Cancelar</button>
         </div>
       )}
+
+      {/* Se não estiver editando, mostrar botões de edição e deleção */}
       {!isEditing && (
         <>
           <button onClick={() => setIsEditing(true)}>Editar</button>
-          <button onClick={deletarCarro}>Deletar</button>
+          <button onClick={deletarTarefa}>Deletar</button>
         </>
-      )}
-      {isAluguelModalOpen && (
-        <div className="modal">
-          <div className="modal-content">
-            <h2>Registrar Aluguel</h2>
-            <input
-              placeholder="CPF do Cliente"
-              value={aluguelData.cpf_cliente}
-              onChange={(e) => setAluguelData({ ...aluguelData, cpf_cliente: e.target.value })}
-            />
-            <input
-              type="date"
-              value={aluguelData.data_retirada}
-              onChange={(e) => setAluguelData({ ...aluguelData, data_retirada: e.target.value })}
-            />
-            <input
-              type="date"
-              value={aluguelData.data_prevista_entrega}
-              onChange={(e) => setAluguelData({ ...aluguelData, data_prevista_entrega: e.target.value })}
-            />
-            <button onClick={salvarAluguel}>Confirmar Aluguel</button>
-            <button onClick={() => setIsAluguelModalOpen(false)}>Cancelar</button>
-          </div>
-        </div>
       )}
     </div>
   );
 }
 
 export default Card;
-
-
